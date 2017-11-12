@@ -3,6 +3,8 @@
 
 ## Introduction
 
+This is a Test
+
 We introduce the image classification benchmark, MiniPlaces Challenge, as an educational tool for practioners of deep learning in computer vision. Through improving the baseline models and building new deep neural networks for image classification, participants in the challenge are expected to gain a deeper understanding of deep neural networks and gain hands-on experience tuning models.
 
 The goal of this challenge is to identify the scene category depicted in a photograph. The data for this task comes from the [Places2 dataset](http://places2.csail.mit.edu/), which contains 10+ million images belonging to 400+ unique scene categories. The challenge data will be a subset of the full Places2 dataset, coming from 100 scene categories and consisting of 100,000 images for training, 10,000 images for validation, and 10,000 images for testing. The images will be resized to 128x128 to make the data more manageable. Furthermore, while the end goal is scene recognition, a subset of the data will contain object labels that might be helpful to build better models.

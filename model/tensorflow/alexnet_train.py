@@ -74,7 +74,7 @@ def alexnet(x, keep_dropout):
     fc6 = tf.add(tf.matmul(fc6, weights['wf6']), biases['bf6'])
     fc6 = tf.nn.relu(fc6)
     fc6 = tf.nn.dropout(fc6, keep_dropout)
-
+    
     # FC + ReLU + Dropout
     fc7 = tf.add(tf.matmul(fc6, weights['wf7']), biases['bf7'])
     fc7 = tf.nn.relu(fc7)
@@ -82,12 +82,12 @@ def alexnet(x, keep_dropout):
 
     # Output FC
     out = tf.add(tf.matmul(fc7, weights['wo']), biases['bo'])
-
+    
     return out
 
 # Construct dataloader
 opt_data_train = {
-    'data_h5': 'miniplaces_256_train.h5',
+    #'data_h5': 'miniplaces_256_train.h5',
     'data_root': '../../data/images/',   # MODIFY PATH ACCORDINGLY
     'data_list': '../../data/train.txt', # MODIFY PATH ACCORDINGLY
     'load_size': load_size,
@@ -96,7 +96,7 @@ opt_data_train = {
     'randomize': True
     }
 opt_data_val = {
-    'data_h5': 'miniplaces_256_val.h5',
+    #'data_h5': 'miniplaces_256_val.h5',
     'data_root': '../../data/images/',   # MODIFY PATH ACCORDINGLY
     'data_list': '../../data/val.txt',   # MODIFY PATH ACCORDINGLY
     'load_size': load_size,
@@ -105,10 +105,10 @@ opt_data_val = {
     'randomize': False
     }
 
-#loader_train = DataLoaderDisk(**opt_data_train)
-#loader_val = DataLoaderDisk(**opt_data_val)
-loader_train = DataLoaderH5(**opt_data_train)
-loader_val = DataLoaderH5(**opt_data_val)
+loader_train = DataLoaderDisk(**opt_data_train)
+loader_val = DataLoaderDisk(**opt_data_val)
+#loader_train = DataLoaderH5(**opt_data_train)
+#loader_val = DataLoaderH5(**opt_data_val)
 
 # tf Graph input
 x = tf.placeholder(tf.float32, [None, fine_size, fine_size, c])
@@ -133,7 +133,7 @@ init = tf.global_variables_initializer()
 saver = tf.train.Saver()
 
 # define summary writer
-writer = tf.train.SummaryWriter('.', graph=tf.get_default_graph())
+#writer = tf.train.SummaryWriter('.', graph=tf.get_default_graph())
 
 # Launch the graph
 with tf.Session() as sess:
@@ -142,41 +142,41 @@ with tf.Session() as sess:
         saver.restore(sess, start_from)
     else:
         sess.run(init)
-
+    
     step = 0
 
     while step < training_iters:
         # Load a batch of training data
         images_batch, labels_batch = loader_train.next_batch(batch_size)
-
+        
         if step % step_display == 0:
             print('[%s]:' %(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
             # Calculate batch loss and accuracy on training set
-            l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1.})
+            l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1.}) 
             print("-Iter " + str(step) + ", Training Loss= " + \
                   "{:.4f}".format(l) + ", Accuracy Top1 = " + \
                   "{:.2f}".format(acc1) + ", Top5 = " + \
                   "{:.2f}".format(acc5))
 
             # Calculate batch loss and accuracy on validation set
-            images_batch_val, labels_batch_val = loader_val.next_batch(batch_size)
-            l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch_val, y: labels_batch_val, keep_dropout: 1.})
+            images_batch_val, labels_batch_val = loader_val.next_batch(batch_size)    
+            l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch_val, y: labels_batch_val, keep_dropout: 1.}) 
             print("-Iter " + str(step) + ", Validation Loss= " + \
                   "{:.4f}".format(l) + ", Accuracy Top1 = " + \
                   "{:.2f}".format(acc1) + ", Top5 = " + \
                   "{:.2f}".format(acc5))
-
+        
         # Run optimization op (backprop)
         sess.run(train_optimizer, feed_dict={x: images_batch, y: labels_batch, keep_dropout: dropout})
-
+        
         step += 1
-
+        
         # Save model
         if step % step_save == 0:
             saver.save(sess, path_save, global_step=step)
             print("Model saved at Iter %d !" %(step))
-
+        
     print("Optimization Finished!")
 
 
@@ -187,7 +187,7 @@ with tf.Session() as sess:
     acc5_total = 0.
     loader_val.reset()
     for i in range(num_batch):
-        images_batch, labels_batch = loader_val.next_batch(batch_size)
+        images_batch, labels_batch = loader_val.next_batch(batch_size)    
         acc1, acc5 = sess.run([accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1.})
         acc1_total += acc1
         acc5_total += acc5

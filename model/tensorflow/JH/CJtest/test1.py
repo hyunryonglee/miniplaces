@@ -6,8 +6,8 @@ from DataLoader import *
 
 # Dataset Parameters
 batch_size = 100
-load_size = 256
-fine_size = 224
+load_size = 128
+fine_size = 116
 c = 3
 data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 
@@ -18,7 +18,7 @@ training_iters = 40000
 step_display = 1000
 step_save = 10000
 path_save = 'alexnet_bn'
-start_from = 'alexnet_bn-40000'
+start_from = 'alexnet_bn-10000'
 
 def batch_norm_layer(x, train_phase, scope_bn):
     return batch_norm(x, decay=0.9, center=True, scale=True,
@@ -30,15 +30,15 @@ def batch_norm_layer(x, train_phase, scope_bn):
 
 def alexnet(x, keep_dropout, train_phase):
     weights = {
-        'wc1': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
-        'wc2': tf.Variable(tf.random_normal([5, 5, 96, 256], stddev=np.sqrt(2./(5*5*96)))),
-        'wc3': tf.Variable(tf.random_normal([3, 3, 256, 384], stddev=np.sqrt(2./(3*3*256)))),
-        'wc4': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
-        'wc5': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
+        'wc1': tf.Variable(tf.random_normal([8, 8, 3, 64], stddev=np.sqrt(2./(8*8*3)))),
+        'wc2': tf.Variable(tf.random_normal([5, 5, 64, 192], stddev=np.sqrt(2./(5*5*64)))),
+        'wc3': tf.Variable(tf.random_normal([3, 3, 192, 256], stddev=np.sqrt(2./(3*3*192)))),
+        'wc4': tf.Variable(tf.random_normal([3, 3, 256, 192], stddev=np.sqrt(2./(3*3*256)))),
+        'wc5': tf.Variable(tf.random_normal([3, 3, 192, 192], stddev=np.sqrt(2./(3*3*192)))),
 
-        'wf6': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
-        'wf7': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
-        'wo': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096)))
+        'wf6': tf.Variable(tf.random_normal([8*8*192, 2048], stddev=np.sqrt(2./(8*8*192)))),
+        'wf7': tf.Variable(tf.random_normal([2048, 2048], stddev=np.sqrt(2./2048))),
+        'wo': tf.Variable(tf.random_normal([2048, 100], stddev=np.sqrt(2./2048)))
     }
 
     biases = {
@@ -46,7 +46,7 @@ def alexnet(x, keep_dropout, train_phase):
     }
 
     # Conv + ReLU + Pool, 224->55->27
-    conv1 = tf.nn.conv2d(x, weights['wc1'], strides=[1, 4, 4, 1], padding='SAME')
+    conv1 = tf.nn.conv2d(x, weights['wc1'], strides=[1, 2, 2, 1], padding='SAME')
     conv1 = batch_norm_layer(conv1, train_phase, 'bn1')
     conv1 = tf.nn.relu(conv1)
     pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
@@ -156,68 +156,68 @@ saver = tf.train.Saver()
 
 ##############
 #### COMMENT OUT FROM HERE WHEN TESTING
-with tf.Session() as sess:
-    # Initialization
-    if len(start_from)>1:
-        saver.restore(sess, start_from)
-    else:
-        sess.run(init)
+#with tf.Session() as sess:
+#    # Initialization
+#    if len(start_from)>1:
+#        saver.restore(sess, start_from)
+#    else:
+#        sess.run(init)
 
-    step = 0
+#    step = 0
 
-    while step < training_iters:
-        # Load a batch of training data
-        images_batch, labels_batch = loader_train.next_batch(batch_size)
+#    while step < training_iters:
+#        # Load a batch of training data
+#        images_batch, labels_batch = loader_train.next_batch(batch_size)
+#
+#        if step % step_display == 0:
+#            print('[%s]:' %(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
-        if step % step_display == 0:
-            print('[%s]:' %(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+#            # Calculate batch loss and accuracy on training set
+#            l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batc#h, keep_dropout: 1., train_phase: False})
+#            print("-Iter " + str(step) + ", Training Loss= " + \
+#                  "{:.6f}".format(l) + ", Accuracy Top1 = " + \
+#                  "{:.4f}".format(acc1) + ", Top5 = " + \
+#                  "{:.4f}".format(acc5))
 
-            # Calculate batch loss and accuracy on training set
-            l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
-            print("-Iter " + str(step) + ", Training Loss= " + \
-                  "{:.6f}".format(l) + ", Accuracy Top1 = " + \
-                  "{:.4f}".format(acc1) + ", Top5 = " + \
-                  "{:.4f}".format(acc5))
+#            # Calculate batch loss and accuracy on validation set
+#            images_batch_val, labels_batch_val = loader_val.next_batch(batch_size)
+#            l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch_val, y: labels_#batch_val, keep_dropout: 1., train_phase: False})
+#            print("-Iter " + str(step) + ", Validation Loss= " + \
+#                  "{:.6f}".format(l) + ", Accuracy Top1 = " + \
+#                  "{:.4f}".format(acc1) + ", Top5 = " + \
+#                  "{:.4f}".format(acc5))
 
-            # Calculate batch loss and accuracy on validation set
-            images_batch_val, labels_batch_val = loader_val.next_batch(batch_size)
-            l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch_val, y: labels_batch_val, keep_dropout: 1., train_phase: False})
-            print("-Iter " + str(step) + ", Validation Loss= " + \
-                  "{:.6f}".format(l) + ", Accuracy Top1 = " + \
-                  "{:.4f}".format(acc1) + ", Top5 = " + \
-                  "{:.4f}".format(acc5))
+#        # Run optimization op (backprop)
+#        sess.run(train_optimizer, feed_dict={x: images_batch, y: labels_batch, keep_dropout: dropout, train_p#hase: True})
 
-        # Run optimization op (backprop)
-        sess.run(train_optimizer, feed_dict={x: images_batch, y: labels_batch, keep_dropout: dropout, train_phase: True})
+#        step += 1
 
-        step += 1
+#        # Save model
+#        if step % step_save == 0:
+#            saver.save(sess, path_save, global_step=step)
+#            print("Model saved at Iter %d !" %(step))
 
-        # Save model
-        if step % step_save == 0:
-            saver.save(sess, path_save, global_step=step)
-            print("Model saved at Iter %d !" %(step))
-
-    print("Optimization Finished!")
+#    print("Optimization Finished!")
 
 
-    # Evaluate on the whole validation set
-    print('Evaluation on the whole validation set...')
-    num_batch = loader_val.size()//batch_size
-    acc1_total = 0.
-    acc5_total = 0.
-    loader_val.reset()
-    for i in range(num_batch):
-        images_batch, labels_batch = loader_val.next_batch(batch_size)
-        acc1, acc5 = sess.run([accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
-        acc1_total += acc1
-        acc5_total += acc5
-        print("Validation Accuracy Top1 = " + \
-              "{:.4f}".format(acc1) + ", Top5 = " + \
-              "{:.4f}".format(acc5))
+#    # Evaluate on the whole validation set
+#    print('Evaluation on the whole validation set...')
+#    num_batch = loader_val.size()//batch_size
+#    acc1_total = 0.
+#    acc5_total = 0.
+#    loader_val.reset()
+#    for i in range(num_batch):
+#        images_batch, labels_batch = loader_val.next_batch(batch_size)
+#        acc1, acc5 = sess.run([accuracy1, accuracy5], feed_dict={x: images_batch, y: labels_batch, keep_dropout: 1., train_phase: False})
+#        acc1_total += acc1
+#        acc5_total += acc5
+#        print("Validation Accuracy Top1 = " + \
+#              "{:.4f}".format(acc1) + ", Top5 = " + \
+#              "{:.4f}".format(acc5))
 
-    acc1_total /= num_batch
-    acc5_total /= num_batch
-    print('Evaluation Finished! Accuracy Top1 = ' + "{:.4f}".format(acc1_total) + ", Top5 = " + "{:.4f}".format(acc5_total))
+#    acc1_total /= num_batch
+#    acc5_total /= num_batch
+#    print('Evaluation Finished! Accuracy Top1 = ' + "{:.4f}".format(acc1_total) + ", Top5 = " + "{:.4f}".form#at(acc5_total))
 
 
 
@@ -250,7 +250,7 @@ with tf.Session() as sess:
     step = 0
 
     # Evaluate on training set
-    predictionFile = open('pred.txt', 'w')
+    predictionFile = open('pred_j_10000.txt', 'w')
     testFile = open('../../../../data/test.txt', 'r')
     num_batch = loader_test.size()//batch_size
     loader_test.reset();

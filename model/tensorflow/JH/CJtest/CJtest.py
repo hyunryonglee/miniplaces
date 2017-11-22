@@ -1,48 +1,49 @@
+#from __future__ import absolute_import
+#from __future__ import division
+
 import os, datetime
 import numpy as np
 from six.moves import range  # pylint: disable=redefined-builtin 
 import tensorflow as tf
 from tensorflow.contrib.layers.python.layers import batch_norm
 from DataLoader import *
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
-from functools import partial
-import multiprocessing.pool
-import os
-import re
-import threading
 
-from tensorflow.python.keras._impl.keras import backend as K
-from tensorflow.python.platform import tf_logging as logging
+#from functools import partial
+#import multiprocessing.pool
+#import os
+#import re
+#import threading
 
-try:
-  from PIL import Image as pil_image
-except ImportError:
-  pil_image = None
-try:
-  from scipy import linalg
-  import scipy.ndimage as ndi
-except ImportError:
-  linalg = None
-  ndi = None
+#from tensorflow.python.keras._impl.keras import backend as K
+#from tensorflow.python.platform import tf_logging as logging
+
+#try:
+#  from PIL import Image as pil_image
+#except ImportError:
+#  pil_image = None
+#try:
+#  from scipy import linalg
+#  import scipy.ndimage as ndi
+#except ImportError:
+#  linalg = None
+#  ndi = None
 # pylint: enable=g-import-not-at-to
 
 
 # Dataset Parameters
-batch_size = 30
+batch_size = 32
 load_size = 128
 fine_size = 116
 c = 3
 data_mean = np.asarray([0.45834960097,0.44674252445,0.41352266842])
 
 # Training Parameters
-learning_rate = 0.0001
+learning_rate = 0.001
 dropout = 0.5 # Dropout, probability to keep units
-training_iters = 40000
-step_display = 1000
-step_save = 10000
+training_iters = 1500
+step_display = 100
+step_save = 2000
 path_save = 'alexnet_bn'
 start_from = ''
 
@@ -73,42 +74,42 @@ def alexnet(x, keep_dropout, train_phase):
 
     # Conv + ReLU + Pool, 116->58->29
     conv1 = tf.nn.conv2d(x, weights['wc1'], strides=[1, 2, 2, 1], padding='SAME')
-#    conv1 = batch_norm_layer(conv1, train_phase, 'bn1')
+    conv1 = batch_norm_layer(conv1, train_phase, 'bn1')
     conv1 = tf.nn.relu(conv1)
     pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Conv + ReLU  + Pool, 29 -> 14
     conv2 = tf.nn.conv2d(pool1, weights['wc2'], strides=[1, 1, 1, 1], padding='SAME')
-#    conv2 = batch_norm_layer(conv2, train_phase, 'bn2')
+    conv2 = batch_norm_layer(conv2, train_phase, 'bn2')
     conv2 = tf.nn.relu(conv2)
     pool2 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Conv + ReLU, 14-> 14
     conv3 = tf.nn.conv2d(pool2, weights['wc3'], strides=[1, 1, 1, 1], padding='SAME')
-#    conv3 = batch_norm_layer(conv3, train_phase, 'bn3')
+    conv3 = batch_norm_layer(conv3, train_phase, 'bn3')
     conv3 = tf.nn.relu(conv3)
 
     # Conv + ReLU, 14-> 14
     conv4 = tf.nn.conv2d(conv3, weights['wc4'], strides=[1, 1, 1, 1], padding='SAME')
-#    conv4 = batch_norm_layer(conv4, train_phase, 'bn4')
+    conv4 = batch_norm_layer(conv4, train_phase, 'bn4')
     conv4 = tf.nn.relu(conv4)
 
     # Conv + ReLU + Pool, 14->7
     conv5 = tf.nn.conv2d(conv4, weights['wc5'], strides=[1, 1, 1, 1], padding='SAME')
-#    conv5 = batch_norm_layer(conv5, train_phase, 'bn5')
+    conv5 = batch_norm_layer(conv5, train_phase, 'bn5')
     conv5 = tf.nn.relu(conv5)
     pool5 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # FC + ReLU + Dropout
     fc6 = tf.reshape(pool5, [-1, weights['wf6'].get_shape().as_list()[0]])
     fc6 = tf.matmul(fc6, weights['wf6'])
-#    fc6 = batch_norm_layer(fc6, train_phase, 'bn6')
+    fc6 = batch_norm_layer(fc6, train_phase, 'bn6')
     fc6 = tf.nn.relu(fc6)
     fc6 = tf.nn.dropout(fc6, keep_dropout)
 
     # FC + ReLU + Dropout
     fc7 = tf.matmul(fc6, weights['wf7'])
-#    fc7 = batch_norm_layer(fc7, train_phase, 'bn7')
+    fc7 = batch_norm_layer(fc7, train_phase, 'bn7')
     fc7 = tf.nn.relu(fc7)
     fc7 = tf.nn.dropout(fc7, keep_dropout)
 
@@ -123,36 +124,36 @@ def flip_axis(x, axis):
     x = x.swapaxes(0, axis)
     return x
 
-def random_rotation(x,
-                    rg,
-                    row_axis=1,
-                    col_axis=2,
-                    channel_axis=0,
-                    fill_mode='nearest',
-                    cval=0.):
-      """Performs a random rotation of a Numpy image tensor.
-  Arguments:
-      x: Input tensor. Must be 3D.
-      rg: Rotation range, in degrees.
-      row_axis: Index of axis for rows in the input tensor.
-      col_axis: Index of axis for columns in the input tensor.
-      channel_axis: Index of axis for channels in the input tensor.
-      fill_mode: Points outside the boundaries of the input
-          are filled according to the given mode
-          (one of `{'constant', 'nearest', 'reflect', 'wrap'}`).
-      cval: Value used for points outside the boundaries
-          of the input if `mode='constant'`.
-  Returns:
-      Rotated Numpy image tensor.
-  """
-    theta = np.pi / 180 * np.random.uniform(-rg, rg)
-    rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
-                                [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
+#def random_rotation(x,
+#                    rg,
+#                    row_axis=1,
+#                    col_axis=2,
+#                    channel_axis=0,
+#                    fill_mode='nearest',
+#                    cval=0.):
+#      """Performs a random rotation of a Numpy image tensor.
+#  Arguments:
+#      x: Input tensor. Must be 3D.
+#      rg: Rotation range, in degrees.
+#      row_axis: Index of axis for rows in the input tensor.
+#      col_axis: Index of axis for columns in the input tensor.
+#      channel_axis: Index of axis for channels in the input tensor.
+#      fill_mode: Points outside the boundaries of the input
+#          are filled according to the given mode
+#          (one of `{'constant', 'nearest', 'reflect', 'wrap'}`).
+#      cval: Value used for points outside the boundaries
+#          of the input if `mode='constant'`.
+#  Returns:
+#      Rotated Numpy image tensor.
+#  """
+#    theta = np.pi / 180 * np.random.uniform(-rg,rg)
+#    rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
+#                                [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
 
-    h, w = x.shape[row_axis], x.shape[col_axis]
-    transform_matrix = transform_matrix_offset_center(rotation_matrix, h, w)
-    x = apply_transform(x, transform_matrix, channel_axis, fill_mode, cval)
-    return x
+#   h, w = x.shape[row_axis], x.shape[col_axis]
+#    transform_matrix = transform_matrix_offset_center(rotation_matrix, h, w)
+#    x = apply_transform(x, transform_matrix, channel_axis, fill_mode, cval)
+#    return x
 
 
 # Construct dataloader
